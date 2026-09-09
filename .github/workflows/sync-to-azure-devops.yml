@@ -1,0 +1,35 @@
+name: Sync merged PR to Azure DevOps
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  push-to-azure-devops:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Push main to Azure DevOps branch
+        env:
+          AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+          AZURE_DEVOPS_ORG: star-knowledge
+          AZURE_DEVOPS_PROJECT: Grab TV
+          AZURE_DEVOPS_REPO: Merchandise App
+          AZURE_DEVOPS_BRANCH: App/Merchandise
+        run: |
+          set -euo pipefail
+
+          ENCODED_PROJECT=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$AZURE_DEVOPS_PROJECT")
+          ENCODED_REPO=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$AZURE_DEVOPS_REPO")
+
+          REMOTE_URL="https://PAT:${AZURE_DEVOPS_PAT}@dev.azure.com/${AZURE_DEVOPS_ORG}/${ENCODED_PROJECT}/_git/${ENCODED_REPO}"
+
+          git remote add azure "$REMOTE_URL"
+          git push azure "HEAD:refs/heads/${AZURE_DEVOPS_BRANCH}" --force
